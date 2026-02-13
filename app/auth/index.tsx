@@ -13,13 +13,13 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Mail, Lock, User, Eye, EyeOff, ChevronRight } from "lucide-react-native";
-import { signInWithEmail, signUpWithEmail, getCurrentUser } from "../services/authService";
-import { palette, radii, spacing, typography } from "../theme";
+import { signInWithEmail, signUpWithEmail } from "../services/authService";
+import { palette, radii, spacing } from "../theme";
 
 type Mode = "signin" | "signup";
 
 export default function AuthScreen() {
-    const router = useRouter();
+    const router = useRouter(); // Kept for edge cases if needed, but primary nav is reactive
     const [mode, setMode] = useState<Mode>("signin");
     const isSignUp = mode === "signup";
 
@@ -53,15 +53,13 @@ export default function AuthScreen() {
                 await signInWithEmail({ email, password });
                 setMessage({ text: "Welcome back!", type: "success" });
             }
-            setTimeout(() => router.replace("/"), 800);
+            // REDUNDANCY FIX: Removed manual router.replace("/").
+            // The _layout.tsx listener will handle the redirect automatically when the session updates.
         } catch (error: any) {
             const errorText = error.message?.includes("session is active")
                 ? "Already logged in. Redirecting..."
                 : (error instanceof Error ? error.message : "Authentication failed");
             setMessage({ text: errorText, type: "error" });
-            if (error.message?.includes("session is active")) {
-                setTimeout(() => router.replace("/"), 800);
-            }
         } finally {
             setLoading(false);
         }
@@ -168,8 +166,8 @@ const styles = StyleSheet.create({
     input: { flex: 1, color: palette.textPrimary, fontSize: 16, height: "100%" },
     eyeBtn: { padding: 8 },
     statusBox: { padding: 12, borderRadius: radii.md, alignItems: "center" },
-    errorBox: { backgroundColor: "rgba(239, 68, 68, 0.1)" },
-    successBox: { backgroundColor: "rgba(34, 197, 94, 0.1)" },
+    errorBox: { backgroundColor: palette.errorBg },
+    successBox: { backgroundColor: palette.successBg },
     statusText: { fontSize: 14, fontWeight: "600", color: palette.textPrimary },
     primaryButton: { backgroundColor: palette.primary, borderRadius: radii.lg, height: 60, flexDirection: "row", alignItems: "center", justifyContent: "center", marginTop: 10, gap: 8 },
     primaryButtonText: { color: "#FFF", fontWeight: "800", fontSize: 18 },

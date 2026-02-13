@@ -23,21 +23,21 @@ export async function signOut() {
     }
 }
 
-// Update return type to use UserPrefs
+// Core function to fetch user
 export async function getCurrentUser() {
     return await account.get<UserPrefs>();
 }
 
-// Update return type to use UserPrefs
+// Refactored to reuse getCurrentUser logic
 export async function restoreSessionUser() {
     try {
-        return await account.get<UserPrefs>();
+        return await getCurrentUser();
     } catch {
         return null;
     }
 }
 
-// NEW FUNCTION: Update User Preferences in Appwrite
+// Update User Preferences in Appwrite
 export async function updateUserPreferences(prefs: UserPrefs) {
     return await account.updatePrefs(prefs);
 }

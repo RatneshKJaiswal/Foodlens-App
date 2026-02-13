@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { Image } from "expo-image";
-import { palette, radii, spacing, typography } from "../theme";
+import { palette, radii, spacing } from "../theme";
 import { Camera, Image as ImageIcon, Sparkles } from "lucide-react-native";
 
 type UploadCardProps = {
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     title: { color: palette.textPrimary, fontSize: 20, fontWeight: "900" },
     subtitle: { color: palette.textSecondary, fontSize: 13 },
     emptyState: { flexDirection: "row", gap: spacing.md, height: 120 },
-    uploadBox: { flex: 1, backgroundColor: "rgba(37, 99, 235, 0.1)", borderRadius: radii.md, justifyContent: "center", alignItems: "center", borderStyle: "dashed", borderWidth: 2, borderColor: palette.primary },
+    uploadBox: { flex: 1, backgroundColor: palette.primarySoft, borderRadius: radii.md, justifyContent: "center", alignItems: "center", borderStyle: "dashed", borderWidth: 2, borderColor: palette.primary },
     cameraBox: { backgroundColor: palette.secondary, borderColor: "transparent", borderStyle: "solid" },
     uploadText: { marginTop: 8, fontWeight: "700", color: palette.primary, fontSize: 12 },
     previewContainer: { borderRadius: radii.md, overflow: "hidden", height: 200 },

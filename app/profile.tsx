@@ -17,13 +17,15 @@ import { ArrowLeft, Check, Flame, Dumbbell, Activity, TrendingUp, Target } from 
 import { getCurrentUser, updateUserPreferences } from "./services/authService";
 import { palette, radii, spacing } from "./theme";
 import { FitnessGoal, UserPrefs } from "./types/user";
+// Import labels from centralized utility
+import { GOAL_LABELS } from "./utils/nutrition";
 
 const GOAL_OPTIONS: { id: FitnessGoal; label: string; icon: any; desc: string }[] = [
-    { id: "weight_loss", label: "Weight Loss", icon: Flame, desc: "Deficit for shedding pounds" },
-    { id: "muscle_gain", label: "Muscle Gain", icon: Dumbbell, desc: "Surplus for building mass" },
-    { id: "endurance", label: "Endurance", icon: Activity, desc: "Fuel for long performance" },
-    { id: "weight_gain", label: "Weight Gain", icon: TrendingUp, desc: "Healthy surplus" },
-    { id: "maintenance", label: "Maintenance", icon: Target, desc: "Keep current weight" },
+    { id: "weight_loss", label: GOAL_LABELS.weight_loss, icon: Flame, desc: "Deficit for shedding pounds" },
+    { id: "muscle_gain", label: GOAL_LABELS.muscle_gain, icon: Dumbbell, desc: "Surplus for building mass" },
+    { id: "endurance", label: GOAL_LABELS.endurance, icon: Activity, desc: "Fuel for long performance" },
+    { id: "weight_gain", label: GOAL_LABELS.weight_gain, icon: TrendingUp, desc: "Healthy surplus" },
+    { id: "maintenance", label: GOAL_LABELS.maintenance, icon: Target, desc: "Keep current weight" },
 ];
 
 export default function ProfileScreen() {
@@ -43,7 +45,6 @@ export default function ProfileScreen() {
         try {
             const user = await getCurrentUser();
             setUserName(user.name);
-            // Appwrite prefs are available here
             if (user.prefs) {
                 if (user.prefs.dailyCalorieGoal) setCalorieGoal(user.prefs.dailyCalorieGoal);
                 if (user.prefs.fitnessGoal) setSelectedGoal(user.prefs.fitnessGoal);
@@ -176,7 +177,7 @@ const styles = StyleSheet.create({
     unitText: { color: palette.textMuted, fontSize: 16, fontWeight: "600" },
     optionsGrid: { gap: spacing.md },
     optionCard: { flexDirection: "row", alignItems: "center", padding: spacing.lg, backgroundColor: palette.surface, borderRadius: radii.md, borderWidth: 1, borderColor: palette.border, gap: spacing.md },
-    optionSelected: { borderColor: palette.primary, backgroundColor: "rgba(37, 99, 235, 0.1)" },
+    optionSelected: { borderColor: palette.primary, backgroundColor: palette.primarySoft },
     iconBox: { width: 40, height: 40, borderRadius: 20, backgroundColor: palette.surfaceAlt, justifyContent: "center", alignItems: "center" },
     iconBoxSelected: { backgroundColor: palette.primary },
     optionInfo: { flex: 1 },

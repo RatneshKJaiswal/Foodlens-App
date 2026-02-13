@@ -14,7 +14,6 @@ const FOOD_ANALYSIS_PROMPT = `Analyze this food image and return result in per 1
 
 export async function analyzeFoodImage({ apiKey, imageBase64 }: { apiKey: string, imageBase64: string }): Promise<FoodResult> {
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use stable multimodal model
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const result = await model.generateContent([

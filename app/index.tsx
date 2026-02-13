@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-    ActivityIndicator,
     Alert,
     Pressable,
     SafeAreaView,
@@ -11,7 +10,7 @@ import {
     StatusBar,
     RefreshControl
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter } from "expo-router";
 import type { Models } from "react-native-appwrite";
 import { LogOut, User as UserIcon } from "lucide-react-native";
 
@@ -19,20 +18,20 @@ import { LogOut, User as UserIcon } from "lucide-react-native";
 import Header from "./components/Header";
 import UploadCard from "./components/UploadCard";
 import FoodInfoCard from "./components/FoodInfoCard";
-import DailyProgress from "./components/DailyProgress"; // New Component
+import DailyProgress from "./components/DailyProgress";
 import Footer from "./components/Footer";
 import CameraModal from "./components/CameraModal";
 
 // Logic
 import { useFoodLens } from "./hooks/useFoodLens";
 import { restoreSessionUser, signOut } from "./services/authService";
-import { logMeal, getDailySummary } from "./services/logService"; // New Service
+import { logMeal, getDailySummary } from "./services/logService";
 import { palette, spacing } from "./theme";
 import { UserPrefs } from "./types/user";
+import { getGoalLabel } from "./utils/nutrition";
 
 export default function Index() {
     const router = useRouter();
-    const [checkingSession, setCheckingSession] = useState(true);
     const [currentUser, setCurrentUser] = useState<Models.User<UserPrefs> | null>(null);
     const [dailyStats, setDailyStats] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
     const [refreshing, setRefreshing] = useState(false);
@@ -52,24 +51,20 @@ export default function Index() {
         closeCamera,
     } = useFoodLens(apiKey);
 
-    // Initial Auth Check
+    // Initial Data Fetch
     useEffect(() => {
         let active = true;
         (async () => {
             try {
+                // REDUNDANCY FIX: Removed manual redirect logic.
+                // Layout ensures we are logged in, we just need to fetch data.
                 const user = await restoreSessionUser();
-                if (active) {
-                    if (user) {
-                        setCurrentUser(user);
-                        fetchDailyStats(user.$id);
-                    } else {
-                        router.replace("/auth");
-                    }
+                if (active && user) {
+                    setCurrentUser(user);
+                    fetchDailyStats(user.$id);
                 }
-            } catch {
-                if (active) router.replace("/auth");
-            } finally {
-                if (active) setCheckingSession(false);
+            } catch (e) {
+                console.log("Error fetching initial data", e);
             }
         })();
         return () => { active = false; };
@@ -102,7 +97,6 @@ export default function Index() {
         if (!currentUser || !result || "error" in result) return;
         try {
             await logMeal(currentUser.$id, result, servings, imageUri || undefined);
-            // Refresh stats immediately after logging
             await fetchDailyStats(currentUser.$id);
             Alert.alert("Success", "Meal logged to your daily summary.");
         } catch (error: any) {
@@ -110,15 +104,13 @@ export default function Index() {
         }
     };
 
-    // Sign Out
-    const handleSignOut = async () => { /* ... same as before ... */ };
+    const handleSignOut = async () => {
+        await signOut();
+        // No manual redirect needed; Layout listener will catch session change
+    };
 
-    if (checkingSession) return null; // Or loading spinner
-    if (!currentUser) return null;
-
-    const displayGoal = currentUser.prefs?.fitnessGoal
-        ? currentUser.prefs.fitnessGoal.replace("_", " ").toUpperCase()
-        : "MAINTENANCE";
+    if (!currentUser) return null; // Wait for data
+    const displayGoal = getGoalLabel(currentUser.prefs?.fitnessGoal).toUpperCase();
 
     return (
         <SafeAreaView style={styles.safe}>
@@ -130,6 +122,7 @@ export default function Index() {
             >
                 <View style={styles.topBar}>
                     <Pressable style={styles.userSection} onPress={() => router.push("/profile")}>
+                        {/* REDUNDANCY FIX: Used palette.primaryMedium */}
                         <View style={styles.avatarCircle}><UserIcon size={20} color={palette.primary} /></View>
                         <View>
                             <Text style={styles.greeting}>Hello, {currentUser.name.split(' ')[0]}</Text>
@@ -141,7 +134,6 @@ export default function Index() {
                     </Pressable>
                 </View>
 
-                {/* New Daily Summary Widget */}
                 <DailyProgress
                     current={dailyStats}
                     goal={{
@@ -162,7 +154,6 @@ export default function Index() {
                         onIdentify={identifyFood}
                     />
 
-                    {/* Pass the log handler */}
                     <FoodInfoCard result={result} onLogMeal={handleLogMeal} />
                 </View>
 
@@ -178,7 +169,7 @@ const styles = StyleSheet.create({
     container: { paddingHorizontal: spacing.xl, paddingBottom: 40 },
     topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: spacing.xxl, marginBottom: spacing.md },
     userSection: { flexDirection: "row", alignItems: "center", gap: spacing.md },
-    avatarCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(37, 99, 235, 0.15)", justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(37, 99, 235, 0.2)" },
+    avatarCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: palette.primaryMedium, justifyContent: "center", alignItems: "center", borderWidth: 1, borderColor: "rgba(37, 99, 235, 0.2)" },
     greeting: { color: palette.textPrimary, fontWeight: "900", fontSize: 20 },
     statusLabel: { color: palette.primary, fontSize: 12, fontWeight: "700", textTransform: "uppercase" },
     signOutIconButton: { padding: 10, backgroundColor: palette.surface, borderRadius: 14, borderWidth: 1, borderColor: palette.border },

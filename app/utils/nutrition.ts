@@ -7,6 +7,20 @@ export function parseNutritionValue(value: string | undefined): number {
     return match ? Math.round(parseFloat(match[0])) : 0;
 }
 
+// Single source of truth for Goal Labels
+export const GOAL_LABELS: Record<FitnessGoal, string> = {
+    weight_loss: "Weight Loss",
+    muscle_gain: "Muscle Gain",
+    endurance: "Endurance",
+    weight_gain: "Weight Gain",
+    maintenance: "Maintenance",
+};
+
+export function getGoalLabel(goal: FitnessGoal | undefined): string {
+    if (!goal) return GOAL_LABELS.maintenance;
+    return GOAL_LABELS[goal] || "MAINTENANCE";
+}
+
 // Calculate Macro Targets based on Goal
 export function getMacroTargets(calorieGoal: number, goal: FitnessGoal = "maintenance") {
     let ratios = { p: 0.3, c: 0.4, f: 0.3 }; // Default Balanced

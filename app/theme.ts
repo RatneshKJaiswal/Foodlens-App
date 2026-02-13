@@ -1,9 +1,14 @@
+import { Platform } from "react-native";
+
 export const palette = {
     background: "#0B1220",
     surface: "#111B2E",
     surfaceAlt: "#0F1A2D",
     border: "rgba(255,255,255,0.08)",
     primary: "#2563EB",
+    // New Standardized Opacities
+    primarySoft: "rgba(37, 99, 235, 0.1)",  // 10% opacity (used in UploadCard, Profile)
+    primaryMedium: "rgba(37, 99, 235, 0.15)", // 15% opacity (used in Avatar)
     secondary: "#334155",
     textPrimary: "#E8EEF9",
     textSecondary: "#B7C4DD",
@@ -12,6 +17,7 @@ export const palette = {
     errorBg: "rgba(239,68,68,0.12)",
     errorTitle: "#FCA5A5",
     errorText: "#FECACA",
+    successBg: "rgba(34, 197, 94, 0.1)", // Standardized success background
 };
 
 export const spacing = {
