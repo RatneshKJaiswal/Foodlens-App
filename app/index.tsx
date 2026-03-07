@@ -15,13 +15,13 @@ import {
 } from "react-native";
 import type { Models } from "react-native-appwrite";
 
-import { BottomNav, TabType } from "./components/BottomNav"; // Ensure this is created
-import DailyProgress from "./components/DailyProgress";
-
 import AddFood from "./components/AddFood";
+import { BottomNav, TabType } from "./components/BottomNav";
+import DailyProgress from "./components/DailyProgress";
+import { HomeView } from "./components/HomeDashboard";
 import { restoreSessionUser, signOut } from "./services/authService";
 import { getDailySummary } from "./services/logService";
-import { palette, spacing } from "./theme";
+import { palette } from "./theme";
 import { UserPrefs } from "./types/user";
 import { getGoalLabel } from "./utils/nutrition";
 
@@ -40,7 +40,7 @@ export default function Index() {
     carbs: 0,
     fat: 0,
   });
-
+  const [dailyLogs, setDailyLogs] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
 
@@ -64,10 +64,18 @@ export default function Index() {
 
   const fetchDailyStats = async (userId: string) => {
     try {
-      const summary = await getDailySummary(userId);
-      setDailyStats(summary);
+      const summary = (await getDailySummary(userId)) as any;
+      const logs = summary.logs || [];
+      setDailyLogs(logs);
+
+      setDailyStats({
+        calories: summary.calories || 0,
+        protein: summary.protein || 0,
+        carbs: summary.carbs || 0,
+        fat: summary.fat || 0,
+      });
     } catch (e) {
-      console.log("Failed to fetch stats", e);
+      console.error("Failed to fetch stats", e);
     }
   };
 
@@ -85,6 +93,7 @@ export default function Index() {
   const confirmSignOut = async () => {
     setShowLogoutModal(false);
     await signOut();
+    router.replace("/auth/signin");
   };
 
   if (!currentUser) return null;
@@ -93,7 +102,6 @@ export default function Index() {
     currentUser.prefs?.fitnessGoal,
   ).toUpperCase();
 
-  // --- RENDER LOGIC FOR TABS ---
   const renderTabContent = () => {
     switch (activeTab) {
       case "Home":
@@ -109,7 +117,7 @@ export default function Index() {
               />
             }
           >
-            {/* ===== TOP BAR ===== */}
+            {/* TOP BAR */}
             <View style={styles.topBar}>
               <Pressable
                 style={styles.userSection}
@@ -134,7 +142,6 @@ export default function Index() {
               </Pressable>
             </View>
 
-            {/* ===== DAILY PROGRESS ===== */}
             <DailyProgress
               current={dailyStats}
               goal={{
@@ -142,120 +149,120 @@ export default function Index() {
                 type: currentUser.prefs?.fitnessGoal || "maintenance",
               }}
             />
-            <Text style={styles.simple}>Implement AI Planner here.</Text>
+
+            <HomeView
+              currentUser={currentUser}
+              dailyStats={dailyStats}
+              dailyLogs={dailyLogs}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
+              setActiveTab={setActiveTab}
+            />
           </ScrollView>
-        );
-      case "Track":
-        return (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>Track Screen</Text>
-          </View>
         );
       case "Lens":
         return (
           <View style={styles.placeholder}>
-            {/* <Text style={styles.placeholderText}>AI Lens Screen</Text> */}
-            <AddFood />
-          </View>
-        );
-      case "Diet":
-        return (
-          <View style={styles.placeholder}>
-            <Text style={styles.placeholderText}>Diet Screen</Text>
+            <AddFood
+              onLogSuccess={() => {
+                if (currentUser) fetchDailyStats(currentUser.$id);
+                setActiveTab("Home");
+              }}
+            />
           </View>
         );
       default:
-        return null;
+        return (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>{activeTab} Screen</Text>
+          </View>
+        );
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+      <SafeAreaView style={styles.safe}>
+        <View style={{ flex: 1 }}>{renderTabContent()}</View>
+        <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      </SafeAreaView>
 
-      {/* Main Content Area */}
-      <View style={{ flex: 1 }}>{renderTabContent()}</View>
-
-      {/* Persistent Bottom Navigation */}
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
-
-      {/* ===== LOGOUT MODAL ===== */}
+      {/* Logout Modal */}
       <Modal
-        transparent
         visible={showLogoutModal}
+        transparent
         animationType="fade"
         onRequestClose={() => setShowLogoutModal(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalIconContainer}>
-              <LogOut size={28} color={palette.primary} />
+            <View style={styles.modalHeader}>
+              <View style={styles.logoutIconCircle}>
+                <LogOut size={28} color="#EF4444" />
+              </View>
+              <Text style={styles.modalTitle}>Sign Out</Text>
+              <Text style={styles.modalSubtitle}>
+                Are you sure you want to log out of your account?
+              </Text>
             </View>
-            <Text style={styles.modalTitle}>Confirm Logout</Text>
-            <Text style={styles.modalSubtitle}>
-              Are you sure you want to sign out?
-            </Text>
-            <View style={styles.modalActions}>
+
+            <View style={styles.modalFooter}>
               <Pressable
-                style={[styles.modalBtn, styles.modalBtnCancel]}
+                style={[styles.modalBtn, styles.cancelBtn]}
                 onPress={() => setShowLogoutModal(false)}
               >
-                <Text style={styles.modalBtnCancelText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalBtn, styles.modalBtnConfirm]}
+                style={[styles.modalBtn, styles.logoutBtn]}
                 onPress={confirmSignOut}
               >
-                <Text style={styles.modalBtnConfirmText}>Logout</Text>
+                <Text style={styles.logoutBtnText}>Logout</Text>
               </Pressable>
             </View>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#0F172A",
+  },
   safe: {
     flex: 1,
-    backgroundColor: palette.background,
   },
   scrollContainer: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: Platform.OS === "android" ? spacing.xxl : spacing.md,
-    paddingBottom: 120, // Extra space so content isn't hidden by BottomNav
-  },
-  placeholder: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  placeholderText: {
-    color: palette.textSecondary,
-    fontSize: 18,
+    // Standardizing horizontal padding across the entire app
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === "android" ? 40 : 10,
+    paddingBottom: 100,
   },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: spacing.lg,
-    marginBottom: spacing.md,
+    paddingVertical: 16,
+    // Removed marginBottom to let components handle their own spacing
   },
-  // ... Keep all your existing avatarCircle, greeting, modal styles below ...
-  simple: { color: "white", marginTop: 20 },
-  userSection: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  placeholder: { flex: 1, justifyContent: "center", alignItems: "center" },
+  placeholderText: { color: palette.textSecondary, fontSize: 18 },
+  userSection: { flexDirection: "row", alignItems: "center", gap: 12 },
   avatarCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: palette.primaryMedium,
+    backgroundColor: "#1E293B",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
     borderColor: "rgba(37, 99, 235, 0.2)",
   },
-  greeting: { color: palette.textPrimary, fontWeight: "900", fontSize: 20 },
+  greeting: { color: "#FFF", fontWeight: "900", fontSize: 20 },
   statusLabel: {
     color: palette.primary,
     fontSize: 12,
@@ -264,69 +271,63 @@ const styles = StyleSheet.create({
   },
   signOutIconButton: {
     padding: 10,
-    backgroundColor: palette.surface,
+    backgroundColor: "#1E293B",
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: "#334155",
   },
+
+  // Modal Styles (Kept as is for consistency)
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    backgroundColor: "rgba(0,0,0,0.8)",
     justifyContent: "center",
     alignItems: "center",
-    padding: spacing.xl,
+    padding: 20,
   },
   modalContent: {
-    width: "90%",
-    backgroundColor: palette.surface,
-    borderRadius: 24,
-    padding: spacing.xxxl,
-    alignItems: "center",
+    width: "100%",
+    backgroundColor: "#1E293B",
+    borderRadius: 28,
+    padding: 24,
     borderWidth: 1,
-    borderColor: palette.border,
+    borderColor: "#334155",
   },
-  modalIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: palette.surfaceAlt,
+  modalHeader: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  logoutIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: palette.border,
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 22,
-    fontWeight: "900",
-    color: palette.textPrimary,
-    marginBottom: spacing.sm,
+    fontWeight: "800",
+    color: "#FFF",
+    marginBottom: 8,
   },
   modalSubtitle: {
     fontSize: 15,
-    color: palette.textSecondary,
+    color: "#94A3B8",
     textAlign: "center",
-    marginBottom: spacing.xxl,
     lineHeight: 22,
   },
-  modalActions: { flexDirection: "row", gap: spacing.md },
+  modalFooter: { flexDirection: "row", gap: 12 },
   modalBtn: {
     flex: 1,
-    height: 56,
+    height: 54,
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
   },
-  modalBtnCancel: {
-    backgroundColor: palette.surface,
-    borderWidth: 1,
-    borderColor: palette.border,
-  },
-  modalBtnConfirm: { backgroundColor: palette.primary },
-  modalBtnCancelText: {
-    color: palette.textSecondary,
-    fontWeight: "700",
-    fontSize: 16,
-  },
-  modalBtnConfirmText: { color: "#FFF", fontWeight: "800", fontSize: 16 },
+  cancelBtn: { backgroundColor: "#334155" },
+  cancelBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  logoutBtn: { backgroundColor: "#EF4444" },
+  logoutBtnText: { color: "#FFF", fontSize: 16, fontWeight: "700" },
 });
