@@ -1,9 +1,11 @@
 import { ID, Query } from "react-native-appwrite";
-import { appwriteClient, databases } from "./appwriteClient"; // We need to export databases from client
+import { appwriteClient, databases } from "./appwriteClient";
 import { parseNutritionValue } from "../utils/nutrition";
 
 const DB_ID = process.env.EXPO_PUBLIC_APPWRITE_DB_ID!;
 const COL_ID = process.env.EXPO_PUBLIC_APPWRITE_COLLECTION_ID!;
+// NEW: Metrics Collection ID
+const METRICS_COL_ID = process.env.EXPO_PUBLIC_APPWRITE_METRICS_COLLECTION_ID!;
 
 export type MealLog = {
     $id?: string;
@@ -16,13 +18,25 @@ export type MealLog = {
     imageUri?: string;
 };
 
-// Helper to get today's date string YYYY-MM-DD
+// --- NEW METRIC TYPES ---
+export type MetricType = "water" | "sleep" | "steps" | "workout";
+
+export type MetricLogPayload = {
+    userId: string;
+    date: string;
+    metricType: MetricType;
+    value?: number; // Used for water (L), sleep (hrs), steps (count), workout (estimated cals)
+    workoutType?: string | null; // e.g., "Running"
+    intensity?: string | null; // e.g., "High"
+    duration?: number | null; // in minutes
+};
+
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
+// --- EXISTING MEAL LOGIC ---
 export async function logMeal(userId: string, foodResult: any, servings: number = 1, imageUri?: string) {
     if (!userId) throw new Error("User ID required");
 
-    // Parse base values
     const baseCals = parseNutritionValue(foodResult.nutritionalInfo.calories);
     const baseProtein = parseNutritionValue(foodResult.nutritionalInfo.protein);
     const baseCarbs = parseNutritionValue(foodResult.nutritionalInfo.carbs);
@@ -45,13 +59,11 @@ export async function logMeal(userId: string, foodResult: any, servings: number 
 export async function getDailySummary(userId: string) {
     const today = getTodayDate();
 
-    // Fetch logs for this user for today
     const response = await databases.listDocuments(DB_ID, COL_ID, [
         Query.equal("userId", userId),
         Query.equal("date", today)
     ]);
 
-    // Aggregate totals
     const totals = {
         calories: 0,
         protein: 0,
@@ -68,4 +80,53 @@ export async function getDailySummary(userId: string) {
     });
 
     return totals;
+}
+
+// --- NEW METRICS LOGIC ---
+
+export async function logDailyMetric(userId: string, metricType: MetricType, data: Partial<MetricLogPayload>) {
+    if (!userId) throw new Error("User ID required");
+
+    const payload: MetricLogPayload = {
+        userId,
+        date: getTodayDate(),
+        metricType,
+        value: data.value || 0,
+        workoutType: data.workoutType || null,
+        intensity: data.intensity || null,
+        duration: data.duration || null,
+    };
+
+    return await databases.createDocument(DB_ID, METRICS_COL_ID, ID.unique(), payload);
+}
+
+export async function getDailyMetricsSummary(userId: string) {
+    const today = getTodayDate();
+
+    const response = await databases.listDocuments(DB_ID, METRICS_COL_ID, [
+        Query.equal("userId", userId),
+        Query.equal("date", today)
+    ]);
+
+    // Aggregate metrics
+    const summary = {
+        water: 0,
+        sleep: 0,
+        steps: 0,
+        workouts: [] as any[],
+        totalWorkoutMinutes: 0,
+        logs: response.documents
+    };
+
+    response.documents.forEach((doc) => {
+        if (doc.metricType === "water") summary.water += doc.value;
+        if (doc.metricType === "sleep") summary.sleep += doc.value;
+        if (doc.metricType === "steps") summary.steps += doc.value;
+        if (doc.metricType === "workout") {
+            summary.workouts.push(doc);
+            summary.totalWorkoutMinutes += doc.duration || 0;
+        }
+    });
+
+    return summary;
 }
